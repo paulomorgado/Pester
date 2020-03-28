@@ -72,4 +72,68 @@ Describe "Get-ScriptModule behavior" {
 
     }
 
+    Context "When mocking a command from Binary module" {
+        $dll = "$PSScriptRoot/SomeModule.dll"
+        # this will run in a job and we need to make sure we get rid of the dll
+        # after we unload the process, so we create the type in the process and run
+        # the second part of the test in $test, and then clean up
+        $job = {
+            param($dll, $test)
+            Add-Type -OutputAssembly $dll -TypeDefinition '
+                using System.Management.Automation;
+
+                namespace SomeModule
+                {
+                    [Cmdlet(VerbsCommon.Get, "Something")]
+                    public class GetSomethingCommand : PSCmdlet
+                    {
+                        [Parameter(Position = 0)]
+                        public string InputObject { get; set; }
+
+                        protected override void EndProcessing()
+                        {
+                            this.WriteObject(InputObject);
+                        }
+                    }
+                }
+            '
+
+            Import-Module "$PSScriptRoot/SomeModule.dll"
+
+            # run the actual test
+            & $test
+        }
+
+        It "Is binary module" {
+
+            try {
+                $test = { (Get-Module SomeModule).ModuleType }
+                Start-Job $job -ArgumentList $dll, $test
+            }
+            finally {
+                if (Test-Path $dll) {
+                    Remove-Item $dll -ErrorAction SilentlyContinue
+                }
+            }
+
+            | Should -Be Binary
+        }
+
+        It "just passes the value when not mocked" {
+            Get-Something "aaa" | Should -Be "aaa"
+        }
+
+        It "returns mock value when mocked" {
+            Mock Get-Something { "hello" }
+
+            Get-Something "aaa" | Should -Be "hello"
+        }
+
+        It "returns mock value when mocked with ModuleName, as long as the mocked function is exported from the module" {
+            Mock Get-Something { "hello" } -ModuleName "SomeModule"
+
+            Get-Something "aaa" | Should -Be "hello"
+        }
+    }
+
 }
