@@ -8,7 +8,6 @@
 $flags = [System.Reflection.BindingFlags]'Instance,NonPublic'
 $script:SessionStateInternalProperty = [System.Management.Automation.SessionState].GetProperty('Internal', $flags)
 $script:ScriptBlockSessionStateInternalProperty = [System.Management.Automation.ScriptBlock].GetProperty('SessionStateInternal', $flags)
-$script:ScriptBlockSessionStateProperty = [System.Management.Automation.ScriptBlock].GetProperty("SessionState", $flags)
 
 if (notDefined PesterPreference) {
     $PesterPreference = [PesterConfiguration]::Default
@@ -1736,7 +1735,11 @@ function Invoke-Test {
     # if (0 -ne $i) {
     #     throw "Test discovery failed. There were $i non-terminating errors during test discovery. This indicates that some of your code is invoked outside of Pester controlled blocks and fails. No tests will be run."
     # }
-    Run-Test -Block $found -SessionState $SessionState
+    $Run_Test = Get-Command Run-Test
+    # Run-Test -Block $found -SessionState $SessionState
+    foreach ($block in $found) {
+        & $PSScriptRoot/sandbox.ps1 $Run_Test -Block $block -SessionState $SessionState
+    }
 }
 
 function PostProcess-DiscoveredBlock {
