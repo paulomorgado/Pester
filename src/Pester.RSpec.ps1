@@ -234,6 +234,30 @@ function Get-RSpecObjectDecoratorPlugin () {
     }
 }
 
+function Get-CleanupPlugin {
+    New-PluginObject -Name "Cleanup" `
+        -ContainerRunStart {
+            param($Context)
+
+            $script = {
+                param ($private:____Get_Variable, $private:____Remove_Variable)
+                foreach ($private:____variable in (& $private:____Get_Variable -Scope "Script")) {
+                    if (-not ($private:____variable.Options -band [System.Management.Automation.ScopedItemOptions]::Constant) -and -not ($private:____variable.Options -band [System.Management.Automation.ScopedItemOptions]::ReadOnly)) {
+                        Write-Host -ForegroundColor Cyan "Removing variable $($private:____variable.Name)"
+                        if ($private:____variable.Name -eq "path") {
+                            Write-Host -ForegroundColor Magenta "Removing variable $($private:____variable.Name)"}
+                        & $private:____Remove_Variable -Name $private:____variable.Name -Scope "Script" -Force -ErrorAction Ignore
+                    }
+                }
+            }
+
+            $sessionStateInternal = $script:ScriptBlockSessionStateInternalProperty.GetValue($Context.Block.ScriptBlock)
+            $script:ScriptBlockSessionStateInternalProperty.SetValue($script, $sessionStateInternal)
+
+            & $script $SafeCommands["Get-Variable"] $SafeCommands["Remove-Variable"]
+    }
+}
+
 function New-PesterConfiguration {
     [CmdletBinding()]
     param()

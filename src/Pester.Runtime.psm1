@@ -789,6 +789,10 @@ function Discover-Test {
         $root.First = $true
         $root.Last = $true
 
+        $root.ScriptBlock = {}
+        $SessionStateInternal = $script:SessionStateInternalProperty.GetValue($SessionState, $null)
+        $script:ScriptBlockSessionStateInternalProperty.SetValue($root.ScriptBlock, $SessionStateInternal, $null)
+
         Reset-PerContainerState -RootBlock $root
 
         $steps = $state.Plugin.ContainerDiscoveryStart

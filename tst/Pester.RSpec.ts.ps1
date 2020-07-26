@@ -179,8 +179,8 @@ i -PassThru:$PassThru {
     }
 
     b "Invoke-Pester parameters" {
+        $path = $pwd
         try {
-            $path = $pwd
             $c = 'Describe "d1" { It "i1" -Tag i1 { $true }; It "i2" -Tag i2 { $true }}'
             $tempDir = Join-Path ([IO.Path]::GetTempPath()) "dir"
             New-Item -ItemType Directory -Path $tempDir -Force
@@ -516,7 +516,7 @@ i -PassThru:$PassThru {
     }
 
     b "Variables do not leak from top-level BeforeAll" {
-        t "BeforeAll keeps a scoped to just the first scriptblock" {
+        t "BeforeAll keeps normal variable scoped to just the first container" {
             $sb = {
                 BeforeAll {
                     $f = 10
@@ -533,6 +533,33 @@ i -PassThru:$PassThru {
                 Describe "d2" {
                     It "t2" {
                         Get-Variable -Name f -ErrorAction Ignore -ValueOnly | Should -BeNullOrEmpty
+                    }
+                }
+            }
+
+            $r = Invoke-Pester -Configuration ([PesterConfiguration]@{ Run = @{ ScriptBlock = $sb, $sb2; PassThru = $true } })
+
+            $r.Containers[0].Blocks[0].Tests[0].Result | Verify-Equal "Passed"
+            $r.Containers[1].Blocks[0].Tests[0].Result | Verify-Equal "Passed"
+        }
+
+        dt "BeforeAll keeps a script scoped variable to just the first container" {
+            $sb = {
+                BeforeAll {
+                    $script:g = 10
+                }
+
+                Describe "d1" {
+                    It "t1" {
+                        $g | Should -Be 10
+                    }
+                }
+            }
+
+            $sb2 = {
+                Describe "d2" {
+                    It "t2" {
+                        Get-Variable -Name g -ErrorAction Ignore -ValueOnly | Should -BeNullOrEmpty
                     }
                 }
             }
