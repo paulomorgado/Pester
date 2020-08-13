@@ -30,7 +30,7 @@ function Get-CoveragePlugin {
         })
 
         if ($null -ne $logger) {
-            & $logger "Added $($breakpoints.Counts) breakpoints in $($sw.ElapsedMilliseconds) ms."
+            & $logger "Added $(@($breakpoints).Count) breakpoints in $($sw.ElapsedMilliseconds) ms."
         }
     } -End {
         param($Context)

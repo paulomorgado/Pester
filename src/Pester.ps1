@@ -755,11 +755,21 @@ function Invoke-Pester {
             }
 
             if ($PesterPreference.CodeCoverage.Enabled.Value) {
+                if ($PesterPreference.Debug.WriteDebugMessages.Value) {
+                    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+                    Write-PesterDebugMessage -Scope CodeCoverage "Creating code coverage report."
+                }
                 $breakpoints = @($run.PluginData.Coverage.CommandCoverage)
                 $coverageReport = Get-CoverageReport -CommandCoverage $breakpoints
+                if ($PesterPreference.Debug.WriteDebugMessages.Value) {
+                    Write-PesterDebugMessage -Scope CodeCoverage "Got coverage report in $($sw.ElapsedMilliseconds) ms."
+                }
                 $totalMilliseconds = $run.Duration.TotalMilliseconds
                 $jaCoCoReport = Get-JaCoCoReportXml -CommandCoverage $breakpoints -TotalMilliseconds $totalMilliseconds -CoverageReport $coverageReport
                 $jaCoCoReport | & $SafeCommands['Out-File'] $PesterPreference.CodeCoverage.OutputPath.Value -Encoding $PesterPreference.CodeCoverage.OutputEncoding.Value
+                if ($PesterPreference.Debug.WriteDebugMessages.Value) {
+                    Write-PesterDebugMessage -Scope CodeCoverage "Created coverage xml report in $($sw.ElapsedMilliseconds) ms."
+                }
             }
 
             if (-not $PesterPreference.Debug.ReturnRawResultObject.Value) {
